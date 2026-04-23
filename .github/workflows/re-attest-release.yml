@@ -1,15 +1,17 @@
 name: Re-attest public release
 
 on:
-  push:
-    tags:
-      - "tinfoil-*"
   workflow_dispatch:
     inputs:
       release_tag:
         description: Release tag to re-attest
         required: true
         type: string
+      force:
+        description: Re-attest even if a public attestation already exists
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: public-re-attest-${{ github.ref_name || inputs.release_tag }}
@@ -29,19 +31,27 @@ jobs:
         id: vars
         env:
           REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
           INPUT_TAG: ${{ inputs.release_tag }}
+          FORCE_REATTEST: ${{ inputs.force }}
         shell: bash
         run: |
           set -euo pipefail
-          release_tag="${REF_NAME:-}"
-          if [[ -z "${release_tag}" ]]; then
-            release_tag="${INPUT_TAG:-}"
-          fi
+          release_tag="${INPUT_TAG:-${REF_NAME:-}}"
           if [[ -z "${release_tag}" ]]; then
             echo "release tag is required" >&2
             exit 1
           fi
+          if [[ "${REF_TYPE:-}" != "tag" ]]; then
+            echo "re-attestation must be dispatched against the release tag ref; got ref type '${REF_TYPE:-unknown}'" >&2
+            exit 1
+          fi
+          if [[ "${REF_NAME:-}" != "${release_tag}" ]]; then
+            echo "re-attestation ref mismatch: expected tag '${release_tag}', got '${REF_NAME:-}'" >&2
+            exit 1
+          fi
           echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "force=${FORCE_REATTEST:-false}" >> "${GITHUB_OUTPUT}"
 
       - name: Download measured release assets
         shell: bash
@@ -91,7 +101,7 @@ jobs:
           fi
 
       - name: Attest measured deployment manifest
-        if: ${{ steps.existing.outputs.exists != 'true' }}
+        if: ${{ steps.vars.outputs.force == 'true' || steps.existing.outputs.exists != 'true' }}
         uses: actions/attest@v3
         with:
           subject-path: output/tinfoil-deployment.json
