@@ -1,8 +1,9 @@
 name: Re-attest public release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "tinfoil-*"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -11,7 +12,7 @@ on:
         type: string
 
 concurrency:
-  group: public-re-attest-${{ github.event.release.tag_name || inputs.release_tag }}
+  group: public-re-attest-${{ github.ref_name || inputs.release_tag }}
   cancel-in-progress: false
 
 jobs:
@@ -27,12 +28,12 @@ jobs:
       - name: Resolve release tag
         id: vars
         env:
-          EVENT_TAG: ${{ github.event.release.tag_name }}
+          REF_NAME: ${{ github.ref_name }}
           INPUT_TAG: ${{ inputs.release_tag }}
         shell: bash
         run: |
           set -euo pipefail
-          release_tag="${EVENT_TAG:-}"
+          release_tag="${REF_NAME:-}"
           if [[ -z "${release_tag}" ]]; then
             release_tag="${INPUT_TAG:-}"
           fi
@@ -46,12 +47,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p output
-          gh release download "${{ steps.vars.outputs.release_tag }}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --pattern "tinfoil-deployment.json" \
-            --pattern "tinfoil.hash" \
-            --dir output
+          deadline=$((SECONDS + 300))
+          while true; do
+            rm -rf output
+            mkdir -p output
+            if gh release download "${{ steps.vars.outputs.release_tag }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --pattern "tinfoil-deployment.json" \
+              --pattern "tinfoil.hash" \
+              --dir output
+            then
+              break
+            fi
+            if (( SECONDS >= deadline )); then
+              echo "Timed out waiting for measured release assets for ${{ steps.vars.outputs.release_tag }}" >&2
+              exit 1
+            fi
+            sleep 5
+          done
 
       - name: Verify deployment digest
         id: digest
