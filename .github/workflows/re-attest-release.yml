@@ -1,0 +1,86 @@
+name: Re-attest public release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to re-attest
+        required: true
+        type: string
+
+concurrency:
+  group: public-re-attest-${{ github.event.release.tag_name || inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve release tag
+        id: vars
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag="${EVENT_TAG:-}"
+          if [[ -z "${release_tag}" ]]; then
+            release_tag="${INPUT_TAG:-}"
+          fi
+          if [[ -z "${release_tag}" ]]; then
+            echo "release tag is required" >&2
+            exit 1
+          fi
+          echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Download measured release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          gh release download "${{ steps.vars.outputs.release_tag }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "tinfoil-deployment.json" \
+            --pattern "tinfoil.hash" \
+            --dir output
+
+      - name: Verify deployment digest
+        id: digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_digest="$(tr -d '\n\r' < output/tinfoil.hash)"
+          actual_digest="sha256:$(sha256sum output/tinfoil-deployment.json | cut -d ' ' -f 1)"
+          if [[ "${expected_digest}" != "${actual_digest}" ]]; then
+            echo "digest mismatch: expected ${expected_digest}, got ${actual_digest}" >&2
+            exit 1
+          fi
+          echo "value=${actual_digest}" >> "${GITHUB_OUTPUT}"
+
+      - name: Skip when public attestation already exists
+        id: existing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh api "repos/${GITHUB_REPOSITORY}/attestations/${{ steps.digest.outputs.value }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Attest measured deployment manifest
+        if: ${{ steps.existing.outputs.exists != 'true' }}
+        uses: actions/attest@v3
+        with:
+          subject-path: output/tinfoil-deployment.json
+          predicate-type: https://tinfoil.sh/predicate/snp-tdx-multiplatform/v1
+          predicate-path: output/tinfoil-deployment.json
