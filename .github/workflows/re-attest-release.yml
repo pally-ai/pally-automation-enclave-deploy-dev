@@ -58,13 +58,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          expected_digest="$(tr -d '\n\r' < output/tinfoil.hash)"
-          actual_digest="sha256:$(sha256sum output/tinfoil-deployment.json | cut -d ' ' -f 1)"
-          if [[ "${expected_digest}" != "${actual_digest}" ]]; then
-            echo "digest mismatch: expected ${expected_digest}, got ${actual_digest}" >&2
+          expected_hex="$(tr -d '\n\r' < output/tinfoil.hash)"
+          actual_hex="$(sha256sum output/tinfoil-deployment.json | cut -d ' ' -f 1)"
+          if [[ "${expected_hex}" != "${actual_hex}" ]]; then
+            echo "digest mismatch: expected ${expected_hex}, got ${actual_hex}" >&2
             exit 1
           fi
-          echo "value=${actual_digest}" >> "${GITHUB_OUTPUT}"
+          echo "value=sha256:${actual_hex}" >> "${GITHUB_OUTPUT}"
 
       - name: Skip when public attestation already exists
         id: existing
