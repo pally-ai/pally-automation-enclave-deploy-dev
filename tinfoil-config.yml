@@ -4,7 +4,7 @@ memory: 16384
 
 containers:
   - name: "automation"
-    image: "ghcr.io/pally-ai/pally-automation-enclave@sha256:29e503511b11fc49036e01dea2fdfa8719fd0cb2d14cb90a5fcc52caafc33462"
+    image: "ghcr.io/pally-ai/pally-automation-enclave@sha256:f1795a2744828ab3eb023f6143b736c2bc34ef287eadee12216c2f5cc5587f56"
     env:
       - PORT: "8080"
       - PALLY_DEPLOY_TRACK: "dev"
@@ -13,7 +13,7 @@ containers:
       - PALLY_TINFOIL_REPO: "tinfoilsh/confidential-model-router"
       - PALLY_TINFOIL_ATTESTATION_URL: "https://inference.tinfoil.sh/.well-known/tinfoil-attestation"
       - PALLY_TINFOIL_ATTESTATION_PINNED_DIGEST: "1ba794e680ab56e6734d32c7358a37247619f3d3e4a01c36e9df22c1651d7dbf"
-      - PALLY_DEPLOY_RELEASE_TAG: "tinfoil-dev-20260502052111-3f041ff943d0"
+      - PALLY_DEPLOY_RELEASE_TAG: "tinfoil-dev-20260506040608-1d7051d00cd5"
     secrets:
       - PALLY_TINFOIL_API_KEY
       - PALLY_AUTOMATION_STATE_PRIVATE_KEY_BASE64
