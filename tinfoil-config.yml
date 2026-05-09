@@ -39,4 +39,5 @@ shim:
   upstream-port: 8080
   paths:
     - /health
+    - /agent/*
     - /automation/*
