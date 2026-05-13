@@ -4,7 +4,7 @@ memory: 16384
 
 containers:
   - name: "automation"
-    image: "ghcr.io/pally-ai/pally-automation-enclave@sha256:24ec487ff4586540fbe87583c5d21c4c436fbfee216a8f6d36fa178ce321b9ef"
+    image: "ghcr.io/pally-ai/pally-automation-enclave@sha256:0ad9d29965ecaa4de0856288e20b6f828b67cb2cef341dc988212602eeef5d52"
     env:
       - PORT: "8080"
       - PALLY_DEPLOY_TRACK: "dev"
@@ -17,12 +17,12 @@ containers:
       - PALLY_BROWSER_USE_PROXY_COUNTRY: "us"
       - PALLY_BROWSER_USE_PROXY_SESSION_STRATEGY: "sticky_per_domain"
       - PALLY_BROWSER_USE_PROVIDER_RETRY_LIMIT: "1"
-      - PALLY_DEPLOY_RELEASE_TAG: "tinfoil-dev-20260513093201-c75e74b6ce1f"
+      - PALLY_DEPLOY_RELEASE_TAG: "tinfoil-dev-20260513095242-c2d4a2007780"
     secrets:
       - PALLY_TINFOIL_API_KEY
       - PALLY_AUTOMATION_STATE_PRIVATE_KEY_BASE64
       - PALLY_AUTOMATION_SERVICE_TOKEN
-      - PALLY_AGENT_BACKEND_TOKEN
+      - PALLY_AGENT_RUNTIME_TOKEN
       - PALLY_AGENT_TRANSPORT_PRIVATE_KEY_BASE64
       - PALLY_EXA_API_KEY
       - PALLY_FIRECRAWL_API_KEY
